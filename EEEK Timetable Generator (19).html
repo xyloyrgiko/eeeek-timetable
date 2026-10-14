@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EEEK Timetable Generator — Copyright by Vagapps</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            900: '#0c4a6e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        html, body {
+            max-width: 100vw;
+            overflow-x: hidden !important;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Mobile scroll containers for dynamic tables */
+        .custom-scrollbar::-webkit-scrollbar { height: 5px; width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Teacher slot interactive states */
+        .slot-available { background-color: #10b981; color: #ffffff; }
+        .slot-unavailable { background-color: #ef4444; color: #ffffff; }
+        
+        /* Print rules */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; color: black !important; font-size: 9pt; }
+            .page-break { page-break-after: always; }
+            .shadow-sm, .shadow-md, .shadow-lg, .shadow-2xl { box-shadow: none !important; }
+            .border { border-color: #cbd5e1 !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between overflow-x-hidden w-full">
+
+    <!-- Header with Minimalist Tech VA Logo -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40 w-full no-print border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap justify-between items-center gap-2">
+            
+            <!-- Branding Container -->
+            <div class="flex items-center space-x-3">
+                <!-- Tech-Style Minimalist "VA" Logo Icon -->
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/30 border border-white/20 shrink-0">
+                    <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                        <!-- V Stem -->
+                        <path d="M4 5l4.5 12L13 5" />
+                        <!-- A Stem & Crossbar -->
+                        <path d="M12 17l4.5-12L21 17" />
+                        <path d="M14.2 11.5h5.1" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-white leading-tight">
+                        EEEK Timetable Generator
+                    </h1>
+                    <p class="text-[11px] font-semibold text-sky-400 tracking-wide uppercase">
+                        Copyright by Vagapps
+                    </p>
+                </div>
+            </div>
+
+            <!-- Quick Action Mobile Tools -->
+            <div class="flex items-center space-x-2 text-xs">
+                <button onclick="app.openModal('backupModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-database text-sky-400"></i>
+                    <span class="hidden sm:inline">Backup / Restore</span>
+                </button>
+                <button onclick="app.openModal('csvModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-file-csv text-emerald-400"></i>
+                    <span class="hidden sm:inline">CSV Import/Export</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <div class="bg-white border-b border-slate-200 sticky top-[57px] z-30 no-print w-full shadow-sm">
+        <div class="max-w-7xl mx-auto px-2 sm:px-6">
+            <nav class="flex space-x-1 sm:space-x-2 overflow-x-auto custom-scrollbar py-2 text-xs sm:text-sm font-medium whitespace-nowrap">
+                <button id="tab-btn-teachers" onclick="app.switchTab('teachers')" class="tab-btn flex-1 min-w-[100px] py-2 px-3 rounded-lg text-center transition flex items-center justify-center gap-1.5 bg-brand-50 text-brand-700 font-bold">
+                    <i class="fa-solid fa-user-tie"></i> <span>Εκπαιδευτικοί</span>
+                </button>
+                <button id="tab-btn-classes" onclick="app.switchTab('classes')" class="tab-btn flex-1 min-w-[90px] py-2 px-3 rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-users"></i> <span>Τμήματα</span>
+                </button>
+                <button id="tab-btn-labs" onclick="app.switchTab('labs')" class="tab-btn flex-1 min-w-[95px] py-2 px-3 rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-flask"></i> <span>Εργαστήρια</span>
+                </button>
+                <button id="tab-btn-assignments" onclick="app.switchTab('assignments')" class="tab-btn flex-1 min-w-[95px] py-2 px-3 rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-book-open"></i> <span>Αναθέσεις</span>
+                </button>
+                <button id="tab-btn-solver" onclick="app.switchTab('solver')" class="tab-btn flex-1 min-w-[95px] py-2 px-3 rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-gears text-amber-500"></i> <span>Επίλυση (CSP)</span>
+                </button>
+                <button id="tab-btn-timetable" onclick="app.switchTab('timetable')" class="tab-btn flex-1 min-w-[100px] py-2 px-3 rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-table-cells"></i> <span>Πρόγραμμα</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 py-4 flex-grow w-full overflow-x-hidden">
+
+        <!-- Toast Notifications -->
+        <div id="toast" class="hidden fixed bottom-4 right-4 left-4 sm:left-auto sm:max-w-md z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-between border border-slate-700 transition-all duration-300">
+            <span id="toast-message" class="text-xs sm:text-sm font-medium"></span>
+            <button onclick="app.hideToast()" class="ml-3 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- TAB 1: TEACHERS & AVAILABILITY MATRIX -->
+        <section id="tab-teachers" class="tab-content space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                
+                <!-- Teacher Form & 5x7 Availability Matrix -->
+                <div class="lg:col-span-5 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-base font-bold text-slate-800 mb-3 flex items-center justify-between">
+                        <span id="teacher-form-title"><i class="fa-solid fa-user-plus text-brand-600 mr-2"></i>Προσθήκη Εκπαιδευτικού</span>
+                        <button onclick="app.resetTeacherForm()" class="text-xs text-brand-600 hover:underline hidden" id="teacher-cancel-btn">Ακύρωση</button>
+                    </h2>
+                    
+                    <form id="teacher-form" onsubmit="app.saveTeacher(event)" class="space-y-3">
+                        <input type="hidden" id="teacher-id">
+                        
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Ονοματεπώνυμο *</label>
+                            <input type="text" id="teacher-name" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="π.χ. Μαρία Παπαδοπούλου">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Ειδικότητα *</label>
+                                <input type="text" id="teacher-specialty" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="π.χ. ΠΕ80, ΠΕ11">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Υποχρ. Ώρες *</label>
+                                <input type="number" id="teacher-hours" min="1" max="30" value="20" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Μέγ. Ώρες / Ημέρα</label>
+                                <input type="number" id="teacher-max-daily" min="1" max="7" value="5" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Μέγ. Συνεχόμενες</label>
+                                <input type="number" id="teacher-max-consec" min="1" max="5" value="4" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-2 py-1">
+                            <input type="checkbox" id="teacher-special" class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
+                            <label for="teacher-special" class="text-xs font-medium text-slate-700">Ειδικό Βοηθητικό / Υποστηρικτικό Προσωπικό (ΕΕΠ/ΕΒΠ)</label>
+                        </div>
+                        
+                        <!-- 5x7 Unavailability Matrix -->
+                        <div class="pt-2">
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-bold text-slate-700">Πλέγμα Διαθεσιμότητας (5 Ημέρες x 7 Ώρες)</label>
+                                <button type="button" onclick="app.toggleAllTeacherSlots()" class="text-[11px] text-brand-600 hover:underline">Εναλλαγή Όλων</button>
+                            </div>
+                            <p class="text-[10px] text-slate-500 mb-2">Πατήστε πάνω στις ώρες για να δηλώσετε διαθεσιμότητα (Πράσινο=Διαθέσιμος, Κόκκινο=Μη Διαθέσιμος).</p>
+                            
+                            <div class="overflow-x-auto custom-scrollbar border border-slate-200 rounded-xl p-1.5 bg-slate-50">
+                                <table class="w-full text-center text-[11px] border-collapse min-w-[240px]">
+                                    <thead>
+                                        <tr class="text-slate-500 border-b border-slate-200">
+                                            <th class="py-1">Hμ</th>
+                                            <th>1η</th><th>2η</th><th>3η</th><th>4η</th><th>5η</th><th>6η</th><th>7η</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="teacher-avail-grid-body">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-floppy-disk"></i> Αποθήκευση Εκπαιδευτικού
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Teacher List Table -->
+                <div class="lg:col-span-7 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-base font-bold text-slate-800"><i class="fa-solid fa-address-book text-brand-600 mr-2"></i>Εκπαιδευτικοί (<span id="teachers-count">0</span>)</h2>
+                    </div>
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left text-xs sm:text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 uppercase text-[10px] sm:text-[11px] tracking-wider border-b border-slate-200">
+                                    <th class="p-2 sm:p-3">Ονοματεπώνυμο</th>
+                                    <th class="p-2 sm:p-3">Ειδικότητα</th>
+                                    <th class="p-2 sm:p-3 text-center">Ώρες</th>
+                                    <th class="p-2 sm:p-3 text-center">Διαθεσιμότητα</th>
+                                    <th class="p-2 sm:p-3 text-right">Ενέργειες</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teachers-table-body" class="divide-y divide-slate-100">
+                                <!-- Rendered dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 2: CLASSES -->
+        <section id="tab-classes" class="tab-content hidden space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                
+                <!-- Class Add Form -->
+                <div class="lg:col-span-4 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-base font-bold text-slate-800 mb-3"><i class="fa-solid fa-users-rectangle text-brand-600 mr-2"></i>Προσθήκη Τμήματος</h2>
+                    <form id="class-form" onsubmit="app.saveClass(event)" class="space-y-3">
+                        <input type="hidden" id="class-id">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Όνομα Τμήματος *</label>
+                            <input type="text" id="class-name" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="π.χ. Α1, Γ2-Γεωπονία">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Τάξη / Τομέας</label>
+                            <input type="text" id="class-grade" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="π.χ. Βαθμίδα Α'">
+                        </div>
+                        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 rounded-xl text-sm transition shadow-sm">
+                            <i class="fa-solid fa-plus mr-1"></i> Αποθήκευση Τμήματος
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Class List Table -->
+                <div class="lg:col-span-8 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-base font-bold text-slate-800 mb-3"><i class="fa-solid fa-list-check text-brand-600 mr-2"></i>Τμήματα ΕΕΕΕΚ (<span id="classes-count">0</span>)</h2>
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left text-xs sm:text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 uppercase text-[11px] border-b border-slate-200">
+                                    <th class="p-3">Όνομα Τμήματος</th>
+                                    <th class="p-3">Τάξη / Τομέας</th>
+                                    <th class="p-3 text-right">Ενέργειες</th>
+                                </tr>
+                            </thead>
+                            <tbody id="classes-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 3: LABS & CAPACITY MANAGEMENT -->
+        <section id="tab-labs" class="tab-content hidden space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                
+                <!-- Lab Form with Capacity Control -->
+                <div class="lg:col-span-4 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-base font-bold text-slate-800 mb-3"><i class="fa-solid fa-vials text-brand-600 mr-2"></i>Προσθήκη Εργαστηρίου / Αίθουσας</h2>
+                    <form id="lab-form" onsubmit="app.saveLab(event)" class="space-y-3">
+                        <input type="hidden" id="lab-id">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Όνομα Εργαστηρίου/Χώρου *</label>
+                            <input type="text" id="lab-name" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="π.χ. Εργαστήριο Πληροφορικής, Θερμοκήπιο">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Χωρητικότητα (Πλήθος Τμημάτων) *</label>
+                            <select id="lab-capacity" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                <option value="1">1 Τμήμα (Αποκλειστική χρήση)</option>
+                                <option value="2">2 Τμήματα παράλληλα</option>
+                                <option value="3">3 Τμήματα παράλληλα</option>
+                                <option value="4">4 Τμήματα παράλληλα</option>
+                                <option value="5">5 Τμήματα παράλληλα</option>
+                            </select>
+                            <span class="text-[11px] text-slate-500 block mt-1">Επιτρέπει την παράλληλη φιλοξενία 1 έως 5 τμημάτων στο ίδιο εργαστήριο.</span>
+                        </div>
+                        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 rounded-xl text-sm transition shadow-sm">
+                            <i class="fa-solid fa-plus mr-1"></i> Αποθήκευση Εργαστηρίου
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Lab List Table -->
+                <div class="lg:col-span-8 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-base font-bold text-slate-800 mb-3"><i class="fa-solid fa-microscope text-brand-600 mr-2"></i>Λίστα Εργαστηρίων (<span id="labs-count">0</span>)</h2>
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left text-xs sm:text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 uppercase text-[11px] border-b border-slate-200">
+                                    <th class="p-3">Εργαστήριο / Αίθουσα</th>
+                                    <th class="p-3 text-center">Χωρητικότητα</th>
+                                    <th class="p-3 text-right">Ενέργειες</th>
+                                </tr>
+                            </thead>
+                            <tbody id="labs-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 4: ASSIGNMENTS & CO-TEACHING TOGGLE -->
+        <section id="tab-assignments" class="tab-content hidden space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                
+                <!-- Assignment Form -->
+                <div class="lg:col-span-5 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-base font-bold text-slate-800 mb-3"><i class="fa-solid fa-file-pen text-brand-600 mr-2"></i>Προσθήκη Ανάθεσης Μαθήματος</h2>
+                    <form id="assignment-form" onsubmit="app.saveAssignment(event)" class="space-y-3">
+                        <input type="hidden" id="assignment-id">
+                        
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Τμήμα *</label>
+                            <select id="assign-class" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                <!-- Dynamic options -->
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Μάθημα *</label>
+                            <input type="text" id="assign-subject" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="π.χ. Πληροφορική, Αυτοεξυπηρέτηση, Γεωπονία">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Εκπαιδευτικοί (Επιλέξτε έναν ή περισσότερους με Ctrl/Cmd) *</label>
+                            <select id="assign-teachers" multiple required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none h-28">
+                                <!-- Dynamic options -->
+                            </select>
+                        </div>
+
+                        <!-- Co-Teaching Tik Toggle -->
+                        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-slate-800 block">Tik Συνδιδασκαλίας / ΕΕΠ / ΕΒΠ</span>
+                                <span class="text-[10px] text-slate-500">Πολλαπλοί εκπαιδευτικοί/βοηθοί στο ίδιο τμήμα.</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="assign-co-teaching" class="sr-only peer">
+                                <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Εργαστήριο (Προαιρετικό)</label>
+                                <select id="assign-lab" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                    <option value="">-- Κανένα --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Συνολικές Ώρες/Εβδ *</label>
+                                <input type="number" id="assign-hours" min="1" max="30" value="2" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Μορφή Περιόδων (Continuous Block Hours) *</label>
+                            <select id="assign-block" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                <option value="1">1-ωρες μεμονωμένες διδασκαλίες</option>
+                                <option value="2">2-ωρα συνεχόμενα blocks</option>
+                                <option value="3">3-ωρα συνεχόμενα blocks</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 rounded-xl text-sm transition shadow-sm">
+                            <i class="fa-solid fa-plus mr-1"></i> Αποθήκευση Ανάθεσης
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Assignment List Table -->
+                <div class="lg:col-span-7 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-base font-bold text-slate-800 mb-3"><i class="fa-solid fa-list-ol text-brand-600 mr-2"></i>Λίστα Αναθέσεων (<span id="assignments-count">0</span>)</h2>
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left text-xs sm:text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 uppercase text-[11px] border-b border-slate-200">
+                                    <th class="p-2 sm:p-3">Τμήμα / Μάθημα</th>
+                                    <th class="p-2 sm:p-3">Εκπαιδευτικοί</th>
+                                    <th class="p-2 sm:p-3">Εργαστήριο</th>
+                                    <th class="p-2 sm:p-3 text-center">Ώρες/Block</th>
+                                    <th class="p-2 sm:p-3 text-right">Ενέργειες</th>
+                                </tr>
+                            </thead>
+                            <tbody id="assignments-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 5: CSP SOLVER ENGINE -->
+        <section id="tab-solver" class="tab-content hidden space-y-4">
+            <div class="bg-white p-5 sm:p-8 rounded-2xl shadow-sm border border-slate-200 max-w-3xl mx-auto text-center space-y-4">
+                
+                <div class="w-16 h-16 bg-gradient-to-tr from-amber-400 to-orange-500 text-white rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-lg shadow-amber-500/20">
+                    <i class="fa-solid fa-gears"></i>
+                </div>
+
+                <h2 class="text-xl font-bold text-slate-800">Αυτόματος Αλγόριθμος FET / CSP Επίλυσης</h2>
+                
+                <p class="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+                    Ο αλγόριθμος Backtracking Constraint Satisfaction Problem (CSP) υπολογίζει το εβδομαδιαίο πρόγραμμα λαμβάνοντας υπόψη το πλέγμα $5 \times 7$ διαθεσιμότητας, τις χωρητικότητες των εργαστηρίων (1–5 τμήματα), τα δίωρα/τρίωρα blocks και τις συνδιδασκαλίες.
+                </p>
+
+                <div class="pt-2">
+                    <button onclick="app.runSolver()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3.5 rounded-xl text-sm sm:text-base transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 mx-auto">
+                        <i class="fa-solid fa-play"></i> Έναρξη Υπολογισμού Προγράμματος
+                    </button>
+                </div>
+
+                <!-- Solver Terminal Logs -->
+                <div id="solver-status" class="hidden mt-4 p-4 rounded-xl border text-left text-xs font-mono max-h-48 overflow-y-auto custom-scrollbar bg-slate-900 text-emerald-400 border-slate-800 shadow-inner">
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 6: TIMETABLE VIEWS & PRINT -->
+        <section id="tab-timetable" class="tab-content hidden space-y-4">
+            
+            <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 no-print space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    
+                    <div class="flex flex-wrap items-center gap-2">
+                        <label class="text-xs font-bold text-slate-700">Προβολή ανά:</label>
+                        <select id="timetable-view-type" onchange="app.populateTimetableTargets(); app.renderTimetable();" class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-brand-500">
+                            <option value="class">Τμήμα</option>
+                            <option value="teacher">Εκπαιδευτικό</option>
+                            <option value="lab">Εργαστήριο / Αίθουσα</option>
+                        </select>
+
+                        <select id="timetable-view-target" onchange="app.renderTimetable()" class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-brand-500">
+                            <!-- Dynamic options -->
+                        </select>
+                    </div>
+
+                    <button onclick="window.print()" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-semibold transition shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-print text-sky-400"></i> Εκτύπωση / PDF
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- Print Card Header -->
+            <div id="timetable-container" class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto custom-scrollbar">
+                <div class="text-center py-10 text-slate-400 text-xs sm:text-sm">
+                    <i class="fa-solid fa-calendar-xmark text-4xl mb-2 block text-slate-300"></i>
+                    Δεν έχει υπολογιστεί ακόμα το πρόγραμμα. Μεταβείτε στην καρτέλα "Επίλυση (CSP)" και πατήστε Έναρξη.
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- BACKUP & RESTORE MODAL -->
+    <div id="backupModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 no-print">
+        <div class="bg-white w-full max-w-lg rounded-2xl p-4 sm:p-6 shadow-2xl space-y-4 border border-slate-100">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-sm sm:text-base"><i class="fa-solid fa-database text-brand-600 mr-2"></i>Διαχείριση JSON Backup</h3>
+                <button onclick="app.closeModal('backupModal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="app.copyJsonToClipboard()" class="flex-1 bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold py-2.5 px-3 rounded-xl text-xs transition border border-brand-200 flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-copy"></i> Αντιγραφή στο Clipboard
+                    </button>
+                    <button onclick="app.downloadJsonFile()" class="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold py-2.5 px-3 rounded-xl text-xs transition border border-emerald-200 flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-download"></i> Λήψη Αρχείου JSON
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Επικόλληση JSON για Επαναφορά</label>
+                    <textarea id="json-paste-area" class="w-full h-32 p-2.5 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-brand-500" placeholder='{"teachers": [...], "classes": [...]}'></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-2">
+                <button onclick="app.restoreJsonFromText()" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition">
+                    Επαναφορά Δεδομένων
+                </button>
+                <button onclick="app.closeModal('backupModal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold px-4 py-2 rounded-xl text-xs transition">
+                    Κλείσιμο
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSV MODAL -->
+    <div id="csvModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 no-print">
+        <div class="bg-white w-full max-w-lg rounded-2xl p-4 sm:p-6 shadow-2xl space-y-4 border border-slate-100">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-sm sm:text-base"><i class="fa-solid fa-file-csv text-brand-600 mr-2"></i>Εισαγωγή / Εξαγωγή CSV</h3>
+                <button onclick="app.closeModal('csvModal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="space-y-3">
+                <p class="text-xs text-slate-600">Εξαγάγετε τα δεδομένα σας σε CSV αρχεία συμβατά με Excel/Google Sheets.</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="app.exportCSV('teachers')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-xl transition border border-slate-200">
+                        Εξαγωγή Εκπαιδευτικών CSV
+                    </button>
+                    <button onclick="app.exportCSV('assignments')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-xl transition border border-slate-200">
+                        Εξαγωγή Αναθέσεων CSV
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="app.closeModal('csvModal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold px-4 py-2 rounded-xl text-xs transition">
+                    Κλείσιμο
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-3 text-center text-xs text-slate-500 w-full no-print">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-1">
+            <span class="font-medium">EEEK Timetable Generator &copy; 2026</span>
+            <span class="font-bold text-slate-800 flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-sky-500 inline-block"></span>
+                Copyright by Vagapps
+            </span>
+        </div>
+    </footer>
+
+    <script>
+        /**
+         * EEEK Timetable Generator Logic & Backtracking CSP Engine
+         * Copyright by Vagapps
+         */
+        const app = {
+            data: {
+                teachers: [],
+                classes: [],
+                labs: [],
+                assignments: [],
+                timetable: null
+            },
+
+            days: ['Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή'],
+            hours: [1, 2, 3, 4, 5, 6, 7],
+
+            // Current 5x7 availability matrix state
+            currentGrid: Array(5).fill(null).map(() => Array(7).fill(true)),
+
+            init: function() {
+                this.loadFromLocalStorage();
+                this.renderTeacherGrid();
+                this.renderTeachersTable();
+                this.renderClassesTable();
+                this.renderLabsTable();
+                this.renderAssignmentsTable();
+                this.populateDropdowns();
+            },
+
+            switchTab: function(tabName) {
+                document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('bg-brand-50', 'text-brand-700', 'font-bold');
+                    btn.classList.add('text-slate-600');
+                });
+
+                const activeTab = document.getElementById(`tab-${tabName}`);
+                const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+                if (activeTab) activeTab.classList.remove('hidden');
+                if (activeBtn) {
+                    activeBtn.classList.add('bg-brand-50', 'text-brand-700', 'font-bold');
+                    activeBtn.classList.remove('text-slate-600');
+                }
+
+                if (tabName === 'timetable') {
+                    this.populateTimetableTargets();
+                    this.renderTimetable();
+                }
+            },
+
+            showToast: function(msg) {
+                const toast = document.getElementById('toast');
+                document.getElementById('toast-message').innerText = msg;
+                toast.classList.remove('hidden');
+                setTimeout(() => this.hideToast(), 3200);
+            },
+
+            hideToast: function() {
+                document.getElementById('toast').classList.add('hidden');
+            },
+
+            openModal: function(id) { document.getElementById(id).classList.remove('hidden'); },
+            closeModal: function(id) { document.getElementById(id).classList.add('hidden'); },
+
+            saveToLocalStorage: function() {
+                localStorage.setItem('eeek_timetable_vagapps_data', JSON.stringify(this.data));
+            },
+
+            loadFromLocalStorage: function() {
+                const saved = localStorage.getItem('eeek_timetable_vagapps_data');
+                if (saved) {
+                    try { this.data = JSON.parse(saved); } catch(e) {}
+                }
+            },
+
+            /* ---------------- TEACHER & MATRIX LOGIC ---------------- */
+            renderTeacherGrid: function() {
+                const tbody = document.getElementById('teacher-avail-grid-body');
+                tbody.innerHTML = '';
+                this.days.forEach((day, dIdx) => {
+                    let tr = document.createElement('tr');
+                    tr.className = 'border-b border-slate-100';
+                    let tdDay = `<td class="py-1 font-bold text-slate-600 text-[10px]">${day.substring(0, 3)}</td>`;
+                    let slots = '';
+                    for (let h = 0; h < 7; h++) {
+                        const active = this.currentGrid[dIdx][h];
+                        slots += `
+                            <td class="p-0.5">
+                                <button type="button" onclick="app.toggleGridSlot(${dIdx}, ${h})" 
+                                    class="w-full h-6 rounded text-[10px] font-bold transition ${active ? 'slot-available' : 'slot-unavailable'}">
+                                    ${h + 1}
+                                </button>
+                            </td>
+                        `;
+                    }
+                    tr.innerHTML = tdDay + slots;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            toggleGridSlot: function(d, h) {
+                this.currentGrid[d][h] = !this.currentGrid[d][h];
+                this.renderTeacherGrid();
+            },
+
+            toggleAllTeacherSlots: function() {
+                const allActive = this.currentGrid.every(row => row.every(val => val));
+                this.currentGrid = Array(5).fill(null).map(() => Array(7).fill(!allActive));
+                this.renderTeacherGrid();
+            },
+
+            saveTeacher: function(e) {
+                e.preventDefault();
+                const id = document.getElementById('teacher-id').value || 't_' + Date.now();
+                const name = document.getElementById('teacher-name').value.trim();
+                const specialty = document.getElementById('teacher-specialty').value.trim();
+                const hours = parseInt(document.getElementById('teacher-hours').value, 10);
+                const maxDaily = parseInt(document.getElementById('teacher-max-daily').value, 10) || 5;
+                const maxConsec = parseInt(document.getElementById('teacher-max-consec').value, 10) || 4;
+                const isSpecial = document.getElementById('teacher-special').checked;
+
+                const existingIdx = this.data.teachers.findIndex(t => t.id === id);
+                const teacherObj = {
+                    id, name, specialty, hours, maxDaily, maxConsec, isSpecial,
+                    availability: JSON.parse(JSON.stringify(this.currentGrid))
+                };
+
+                if (existingIdx >= 0) {
+                    this.data.teachers[existingIdx] = teacherObj;
+                    this.showToast('Ενημερώθηκε ο εκπαιδευτικός.');
+                } else {
+                    this.data.teachers.push(teacherObj);
+                    this.showToast('Προστέθηκε νέος εκπαιδευτικός.');
+                }
+
+                this.saveToLocalStorage();
+                this.resetTeacherForm();
+                this.renderTeachersTable();
+                this.populateDropdowns();
+            },
+
+            resetTeacherForm: function() {
+                document.getElementById('teacher-id').value = '';
+                document.getElementById('teacher-name').value = '';
+                document.getElementById('teacher-specialty').value = '';
+                document.getElementById('teacher-hours').value = 20;
+                document.getElementById('teacher-max-daily').value = 5;
+                document.getElementById('teacher-max-consec').value = 4;
+                document.getElementById('teacher-special').checked = false;
+                document.getElementById('teacher-cancel-btn').classList.add('hidden');
+                document.getElementById('teacher-form-title').innerHTML = `<i class="fa-solid fa-user-plus text-brand-600 mr-2"></i>Προσθήκη Εκπαιδευτικού`;
+                this.currentGrid = Array(5).fill(null).map(() => Array(7).fill(true));
+                this.renderTeacherGrid();
+            },
+
+            editTeacher: function(id) {
+                const t = this.data.teachers.find(item => item.id === id);
+                if (!t) return;
+                document.getElementById('teacher-id').value = t.id;
+                document.getElementById('teacher-name').value = t.name;
+                document.getElementById('teacher-specialty').value = t.specialty;
+                document.getElementById('teacher-hours').value = t.hours;
+                document.getElementById('teacher-max-daily').value = t.maxDaily || 5;
+                document.getElementById('teacher-max-consec').value = t.maxConsec || 4;
+                document.getElementById('teacher-special').checked = t.isSpecial || false;
+                this.currentGrid = JSON.parse(JSON.stringify(t.availability));
+                this.renderTeacherGrid();
+                document.getElementById('teacher-cancel-btn').classList.remove('hidden');
+                document.getElementById('teacher-form-title').innerHTML = `<i class="fa-solid fa-user-pen text-brand-600 mr-2"></i>Επεξεργασία`;
+            },
+
+            deleteTeacher: function(id) {
+                this.data.teachers = this.data.teachers.filter(t => t.id !== id);
+                this.saveToLocalStorage();
+                this.renderTeachersTable();
+                this.populateDropdowns();
+                this.showToast('Ο εκπαιδευτικός διαγράφηκε.');
+            },
+
+            renderTeachersTable: function() {
+                const tbody = document.getElementById('teachers-table-body');
+                document.getElementById('teachers-count').innerText = this.data.teachers.length;
+                tbody.innerHTML = '';
+
+                this.data.teachers.forEach(t => {
+                    let availCount = 0;
+                    t.availability.forEach(day => day.forEach(slot => { if(slot) availCount++; }));
+                    
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition';
+                    tr.innerHTML = `
+                        <td class="p-2 sm:p-3 font-semibold text-slate-800">
+                            ${t.name}
+                            ${t.isSpecial ? '<span class="ml-1 text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">ΕΕΠ/ΕΒΠ</span>' : ''}
+                        </td>
+                        <td class="p-2 sm:p-3 text-slate-600">${t.specialty}</td>
+                        <td class="p-2 sm:p-3 text-center font-bold text-brand-600">${t.hours}h</td>
+                        <td class="p-2 sm:p-3 text-center">
+                            <span class="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium border border-emerald-200">
+                                ${availCount}/35h
+                            </span>
+                        </td>
+                        <td class="p-2 sm:p-3 text-right space-x-1">
+                            <button onclick="app.editTeacher('${t.id}')" class="text-brand-600 hover:text-brand-800 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="app.deleteTeacher('${t.id}')" class="text-rose-600 hover:text-rose-800 p-1"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            /* ---------------- CLASSES & LABS ---------------- */
+            saveClass: function(e) {
+                e.preventDefault();
+                const id = 'c_' + Date.now();
+                const name = document.getElementById('class-name').value.trim();
+                const grade = document.getElementById('class-grade').value.trim();
+
+                this.data.classes.push({ id, name, grade });
+                this.saveToLocalStorage();
+                document.getElementById('class-form').reset();
+                this.renderClassesTable();
+                this.populateDropdowns();
+                this.showToast('Προστέθηκε τμήμα.');
+            },
+
+            deleteClass: function(id) {
+                this.data.classes = this.data.classes.filter(c => c.id !== id);
+                this.saveToLocalStorage();
+                this.renderClassesTable();
+                this.populateDropdowns();
+                this.showToast('Το τμήμα διαγράφηκε.');
+            },
+
+            renderClassesTable: function() {
+                const tbody = document.getElementById('classes-table-body');
+                document.getElementById('classes-count').innerText = this.data.classes.length;
+                tbody.innerHTML = '';
+                this.data.classes.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition';
+                    tr.innerHTML = `
+                        <td class="p-3 font-semibold text-slate-800">${c.name}</td>
+                        <td class="p-3 text-slate-600">${c.grade || '-'}</td>
+                        <td class="p-3 text-right">
+                            <button onclick="app.deleteClass('${c.id}')" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            saveLab: function(e) {
+                e.preventDefault();
+                const id = 'l_' + Date.now();
+                const name = document.getElementById('lab-name').value.trim();
+                const capacity = parseInt(document.getElementById('lab-capacity').value, 10);
+
+                this.data.labs.push({ id, name, capacity });
+                this.saveToLocalStorage();
+                document.getElementById('lab-form').reset();
+                this.renderLabsTable();
+                this.populateDropdowns();
+                this.showToast('Προστέθηκε εργαστήριο.');
+            },
+
+            deleteLab: function(id) {
+                this.data.labs = this.data.labs.filter(l => l.id !== id);
+                this.saveToLocalStorage();
+                this.renderLabsTable();
+                this.populateDropdowns();
+                this.showToast('Το εργαστήριο διαγράφηκε.');
+            },
+
+            renderLabsTable: function() {
+                const tbody = document.getElementById('labs-table-body');
+                document.getElementById('labs-count').innerText = this.data.labs.length;
+                tbody.innerHTML = '';
+                this.data.labs.forEach(l => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition';
+                    tr.innerHTML = `
+                        <td class="p-3 font-semibold text-slate-800">${l.name}</td>
+                        <td class="p-3 text-center">
+                            <span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg font-semibold text-xs border border-blue-200">
+                                Έως ${l.capacity} τμήματα
+                            </span>
+                        </td>
+                        <td class="p-3 text-right">
+                            <button onclick="app.deleteLab('${l.id}')" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            /* ---------------- ASSIGNMENTS ---------------- */
+            populateDropdowns: function() {
+                const classSel = document.getElementById('assign-class');
+                classSel.innerHTML = this.data.classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+                const teachSel = document.getElementById('assign-teachers');
+                teachSel.innerHTML = this.data.teachers.map(t => `<option value="${t.id}">${t.name} (${t.specialty})</option>`).join('');
+
+                const labSel = document.getElementById('assign-lab');
+                labSel.innerHTML = '<option value="">-- Κανένα --</option>' + 
+                    this.data.labs.map(l => `<option value="${l.id}">${l.name} (Χωρητ.: ${l.capacity})</option>`).join('');
+            },
+
+            saveAssignment: function(e) {
+                e.preventDefault();
+                const classId = document.getElementById('assign-class').value;
+                const subject = document.getElementById('assign-subject').value.trim();
+                const teacherSelect = document.getElementById('assign-teachers');
+                const teacherIds = Array.from(teacherSelect.selectedOptions).map(opt => opt.value);
+                const labId = document.getElementById('assign-lab').value;
+                const hours = parseInt(document.getElementById('assign-hours').value, 10);
+                const blockHours = parseInt(document.getElementById('assign-block').value, 10);
+                const isCoTeaching = document.getElementById('assign-co-teaching').checked;
+
+                if (!teacherIds.length) {
+                    alert('Παρακαλώ επιλέξτε τουλάχιστον έναν εκπαιδευτικό.');
+                    return;
+                }
+
+                const id = 'a_' + Date.now();
+                this.data.assignments.push({
+                    id, classId, subject, teacherIds, labId: labId || null, hours, blockHours, isCoTeaching
+                });
+
+                this.saveToLocalStorage();
+                document.getElementById('assignment-form').reset();
+                this.renderAssignmentsTable();
+                this.showToast('Η ανάθεση αποθηκεύτηκε.');
+            },
+
+            deleteAssignment: function(id) {
+                this.data.assignments = this.data.assignments.filter(a => a.id !== id);
+                this.saveToLocalStorage();
+                this.renderAssignmentsTable();
+                this.showToast('Η ανάθεση διαγράφηκε.');
+            },
+
+            renderAssignmentsTable: function() {
+                const tbody = document.getElementById('assignments-table-body');
+                document.getElementById('assignments-count').innerText = this.data.assignments.length;
+                tbody.innerHTML = '';
+
+                this.data.assignments.forEach(a => {
+                    const cls = this.data.classes.find(c => c.id === a.classId);
+                    const teachersStr = a.teacherIds.map(tid => {
+                        const t = this.data.teachers.find(item => item.id === tid);
+                        return t ? t.name : '';
+                    }).join(', ');
+                    const lab = this.data.labs.find(l => l.id === a.labId);
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition';
+                    tr.innerHTML = `
+                        <td class="p-2 sm:p-3">
+                            <div class="font-bold text-slate-800">${cls ? cls.name : '-'}</div>
+                            <div class="text-xs text-brand-600 font-medium">${a.subject}</div>
+                        </td>
+                        <td class="p-2 sm:p-3 text-slate-700 text-xs">
+                            ${teachersStr}
+                            ${a.isCoTeaching ? '<span class="block text-[10px] text-emerald-600 font-bold">Tik Συνδιδασκαλίας</span>' : ''}
+                        </td>
+                        <td class="p-2 sm:p-3 text-xs text-slate-600">${lab ? lab.name : '-'}</td>
+                        <td class="p-2 sm:p-3 text-center">
+                            <span class="font-bold text-slate-800">${a.hours}h</span>
+                            <span class="text-[10px] text-slate-500 block">(${a.blockHours}ωρα)</span>
+                        </td>
+                        <td class="p-2 sm:p-3 text-right">
+                            <button onclick="app.deleteAssignment('${a.id}')" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            /* ---------------- BACKTRACKING CSP SOLVER ---------------- */
+            runSolver: function() {
+                const statusDiv = document.getElementById('solver-status');
+                statusDiv.classList.remove('hidden');
+                statusDiv.innerHTML = '> Έναρξη αλγορίθμου FET Backtracking CSP...<br>';
+
+                if (!this.data.classes.length || !this.data.assignments.length) {
+                    statusDiv.innerHTML += '<span class="text-rose-400">> Σφάλμα: Δεν έχουν καταχωρηθεί Τμήματα και Αναθέσεις!</span><br>';
+                    return;
+                }
+
+                let grid = Array(5).fill(null).map(() => Array(7).fill(null).map(() => []));
+
+                let tasks = [];
+                this.data.assignments.forEach(a => {
+                    let remainingHours = a.hours;
+                    while (remainingHours > 0) {
+                        let block = Math.min(remainingHours, a.blockHours);
+                        tasks.push({
+                            id: a.id,
+                            classId: a.classId,
+                            subject: a.subject,
+                            teacherIds: a.teacherIds,
+                            labId: a.labId,
+                            isCoTeaching: a.isCoTeaching,
+                            duration: block
+                        });
+                        remainingHours -= block;
+                    }
+                });
+
+                tasks.sort((a, b) => b.duration - a.duration);
+
+                let success = this.backtrackSolve(0, tasks, grid);
+
+                if (success) {
+                    this.data.timetable = grid;
+                    this.saveToLocalStorage();
+                    statusDiv.innerHTML += '<span class="text-emerald-300 font-bold">> Επιτυχία! Το πρόγραμμα δημιουργήθηκε χωρίς συγκρούσεις.</span><br>';
+                    this.showToast('Το πρόγραμμα δημιουργήθηκε επιτυχώς!');
+                    setTimeout(() => this.switchTab('timetable'), 1000);
+                } else {
+                    statusDiv.innerHTML += '<span class="text-rose-400 font-bold">> Αποτυχία: Δεν βρέθηκε έγκυρη λύση. Παρακαλώ χαλαρώστε τους περιορισμούς διαθεσιμότητας.</span><br>';
+                }
+            },
+
+            backtrackSolve: function(taskIdx, tasks, grid) {
+                if (taskIdx >= tasks.length) return true;
+
+                const task = tasks[taskIdx];
+
+                for (let day = 0; day < 5; day++) {
+                    for (let hour = 0; hour <= 7 - task.duration; hour++) {
+                        if (this.canPlaceTask(task, day, hour, grid)) {
+                            this.placeTask(task, day, hour, grid);
+                            if (this.backtrackSolve(taskIdx + 1, tasks, grid)) return true;
+                            this.removeTask(task, day, hour, grid);
+                        }
+                    }
+                }
+                return false;
+            },
+
+            canPlaceTask: function(task, day, startHour, grid) {
+                for (let h = startHour; h < startHour + task.duration; h++) {
+                    const slot = grid[day][h];
+
+                    // Class conflict check
+                    if (slot.some(entry => entry.classId === task.classId)) return false;
+
+                    // Teachers Matrix & Conflict checks
+                    for (let tid of task.teacherIds) {
+                        const teacher = this.data.teachers.find(t => t.id === tid);
+                        if (teacher && !teacher.availability[day][h]) return false;
+                        if (slot.some(entry => entry.teacherIds.includes(tid))) return false;
+                    }
+
+                    // Lab capacity management (1 to 5 concurrent sections)
+                    if (task.labId) {
+                        const lab = this.data.labs.find(l => l.id === task.labId);
+                        const labUsage = slot.filter(entry => entry.labId === task.labId).length;
+                        if (lab && labUsage >= lab.capacity) return false;
+                    }
+                }
+                return true;
+            },
+
+            placeTask: function(task, day, startHour, grid) {
+                for (let h = startHour; h < startHour + task.duration; h++) {
+                    grid[day][h].push({
+                        classId: task.classId,
+                        subject: task.subject,
+                        teacherIds: task.teacherIds,
+                        labId: task.labId,
+                        isCoTeaching: task.isCoTeaching
+                    });
+                }
+            },
+
+            removeTask: function(task, day, startHour, grid) {
+                for (let h = startHour; h < startHour + task.duration; h++) {
+                    grid[day][h] = grid[day][h].filter(entry => entry.classId !== task.classId || entry.subject !== task.subject);
+                }
+            },
+
+            /* ---------------- TIMETABLE RENDER & VIEWS ---------------- */
+            populateTimetableTargets: function() {
+                const type = document.getElementById('timetable-view-type').value;
+                const targetSel = document.getElementById('timetable-view-target');
+                targetSel.innerHTML = '';
+
+                if (type === 'class') {
+                    this.data.classes.forEach(c => targetSel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+                } else if (type === 'teacher') {
+                    this.data.teachers.forEach(t => targetSel.innerHTML += `<option value="${t.id}">${t.name}</option>`);
+                } else if (type === 'lab') {
+                    this.data.labs.forEach(l => targetSel.innerHTML += `<option value="${l.id}">${l.name}</option>`);
+                }
+            },
+
+            renderTimetable: function() {
+                const container = document.getElementById('timetable-container');
+                if (!this.data.timetable) {
+                    container.innerHTML = `
+                        <div class="text-center py-10 text-slate-400 text-xs sm:text-sm">
+                            <i class="fa-solid fa-calendar-xmark text-4xl mb-2 block text-slate-300"></i>
+                            Δεν έχει υπολογιστεί ακόμα το πρόγραμμα. Μεταβείτε στην καρτέλα "Επίλυση (CSP)" και πατήστε Έναρξη.
+                        </div>`;
+                    return;
+                }
+
+                const type = document.getElementById('timetable-view-type').value;
+                const targetId = document.getElementById('timetable-view-target').value;
+
+                if (!targetId) {
+                    container.innerHTML = `<div class="text-center py-4 text-slate-500 text-xs">Παρακαλώ επιλέξτε προβολή.</div>`;
+                    return;
+                }
+
+                let html = `
+                    <div class="mb-4 text-center">
+                        <!-- Branding Header for Print/Display -->
+                        <div class="flex items-center justify-center gap-2 mb-1">
+                            <div class="w-6 h-6 rounded-lg bg-sky-600 text-white flex items-center justify-center font-black text-xs">VA</div>
+                            <h3 class="text-base sm:text-lg font-extrabold text-slate-800">EEEK Timetable Generator</h3>
+                        </div>
+                        <p class="text-xs font-semibold text-slate-600">
+                            ${type==='class'?'Πρόγραμμα Τμήματος: '+this.getName('class', targetId):''}
+                            ${type==='teacher'?'Πρόγραμμα Εκπαιδευτικού: '+this.getName('teacher', targetId):''}
+                            ${type==='lab'?'Πρόγραμμα Εργαστηρίου: '+this.getName('lab', targetId):''}
+                        </p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Copyright by Vagapps</p>
+                    </div>
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full border-collapse text-center text-xs">
+                            <thead>
+                                <tr class="bg-slate-900 text-white">
+                                    <th class="p-2 border border-slate-800">Ώρα</th>
+                                    ${this.days.map(d => `<th class="p-2 border border-slate-800">${d}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                for (let h = 0; h < 7; h++) {
+                    html += `<tr><td class="p-2 bg-slate-100 font-bold border border-slate-200">${h + 1}η</td>`;
+                    for (let d = 0; d < 5; d++) {
+                        const slotEntries = this.data.timetable[d][h];
+                        let filtered = [];
+
+                        if (type === 'class') filtered = slotEntries.filter(e => e.classId === targetId);
+                        else if (type === 'teacher') filtered = slotEntries.filter(e => e.teacherIds.includes(targetId));
+                        else if (type === 'lab') filtered = slotEntries.filter(e => e.labId === targetId);
+
+                        if (filtered.length > 0) {
+                            html += `<td class="p-2 border border-slate-200 bg-sky-50/80 text-slate-800 align-top">`;
+                            filtered.forEach(entry => {
+                                const cls = this.data.classes.find(c => c.id === entry.classId);
+                                const lab = this.data.labs.find(l => l.id === entry.labId);
+                                const teachers = entry.teacherIds.map(tid => {
+                                    const t = this.data.teachers.find(item => item.id === tid);
+                                    return t ? t.name : '';
+                                }).join(', ');
+
+                                html += `
+                                    <div class="font-extrabold text-brand-700">${entry.subject}</div>
+                                    ${type !== 'class' ? `<div class="text-[11px] font-bold text-slate-700">${cls ? cls.name : ''}</div>` : ''}
+                                    ${type !== 'teacher' ? `<div class="text-[10px] text-slate-500">${teachers}</div>` : ''}
+                                    ${lab ? `<div class="text-[9px] bg-amber-100 text-amber-800 font-semibold px-1 py-0.5 rounded inline-block mt-0.5">${lab.name}</div>` : ''}
+                                `;
+                            });
+                            html += `</td>`;
+                        } else {
+                            html += `<td class="p-2 border border-slate-200 text-slate-300 font-light">-</td>`;
+                        }
+                    }
+                    html += `</tr>`;
+                }
+
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
+            },
+
+            getName: function(type, id) {
+                if (type === 'class') { const c = this.data.classes.find(i => i.id === id); return c ? c.name : ''; }
+                if (type === 'teacher') { const t = this.data.teachers.find(i => i.id === id); return t ? t.name : ''; }
+                if (type === 'lab') { const l = this.data.labs.find(i => i.id === id); return l ? l.name : ''; }
+                return '';
+            },
+
+            /* ---------------- DATA BACKUP & CSV ---------------- */
+            copyJsonToClipboard: function() {
+                const str = JSON.stringify(this.data, null, 2);
+                const el = document.createElement('textarea');
+                el.value = str;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                this.showToast('Αντιγράφηκε στο Clipboard!');
+            },
+
+            downloadJsonFile: function() {
+                const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data, null, 2));
+                const anchor = document.createElement('a');
+                anchor.setAttribute("href", str);
+                anchor.setAttribute("download", "eeek_timetable_backup.json");
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+            },
+
+            restoreJsonFromText: function() {
+                const text = document.getElementById('json-paste-area').value.trim();
+                if (!text) return;
+                try {
+                    this.data = JSON.parse(text);
+                    this.saveToLocalStorage();
+                    this.init();
+                    this.closeModal('backupModal');
+                    this.showToast('Επαναφορά ολοκληρώθηκε!');
+                } catch(e) {
+                    alert('Μη έγκυρη μορφή JSON.');
+                }
+            },
+
+            exportCSV: function(type) {
+                let csv = "data:text/csv;charset=utf-8,";
+                if (type === 'teachers') {
+                    csv += "Name,Specialty,Hours,IsSpecial\n";
+                    this.data.teachers.forEach(t => csv += `"${t.name}","${t.specialty}",${t.hours},${t.isSpecial}\n`);
+                } else if (type === 'assignments') {
+                    csv += "Class,Subject,Hours,BlockHours\n";
+                    this.data.assignments.forEach(a => {
+                        const cls = this.data.classes.find(c => c.id === a.classId);
+                        csv += `"${cls ? cls.name : ''}","${a.subject}",${a.hours},${a.blockHours}\n`;
+                    });
+                }
+                const link = document.createElement("a");
+                link.setAttribute("href", encodeURI(csv));
+                link.setAttribute("download", `eeek_${type}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        };
+
+        window.onload = function() {
+            app.init();
+        };
+    </script>
+</body>
+</html>
